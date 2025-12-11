@@ -1,3 +1,8 @@
+import { getDb } from './firebase.js';
+import { ref, set, get } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+
+const db = getDb();
+
 // --- STATE MANAGEMENT ---
 const state = {
     currentUser: null,
@@ -16,7 +21,7 @@ const views = {
 
 // --- INIT ---
 function init() {
-    loadFromStorage();
+    // loadFromStorage();
     setupEventListeners();
 
     // Check URL params for auto-join (optional enhancement)
@@ -27,6 +32,7 @@ function init() {
     }
 }
 
+/*
 function loadFromStorage() {
     const storedRooms = localStorage.getItem('horario_rooms');
     if (storedRooms) {
@@ -36,6 +42,16 @@ function loadFromStorage() {
 
 function saveToStorage() {
     localStorage.setItem('horario_rooms', JSON.stringify(state.rooms));
+}
+*/
+
+async function saveRoomToFirebase(roomId, data) {
+    await set(ref(db, "rooms/" + roomId), data);
+}
+
+async function loadRoomFromFirebase(roomId) {
+    const snapshot = await get(ref(db, "rooms/" + roomId));
+    return snapshot.exists() ? snapshot.val() : null;
 }
 
 // --- NAVIGATION ---
@@ -60,7 +76,7 @@ function createRoom() {
     showView('create');
 }
 
-function confirmCreateRoom() {
+async function confirmCreateRoom() {
     const title = document.getElementById('cal-title').value.trim() || 'Evento Sin Título';
     const monthInput = document.getElementById('cal-month').value; // YYYY-MM
 
@@ -87,12 +103,13 @@ function confirmCreateRoom() {
 
     state.rooms[roomId] = newRoom;
     state.currentRoomId = roomId;
-    saveToStorage();
+    // saveToStorage();
+    await saveRoomToFirebase(roomId, newRoom);
 
     enterRoom(roomId);
 }
 
-function joinRoom() {
+async function joinRoom() {
     const username = document.getElementById('username').value.trim();
     const code = document.getElementById('join-code').value.trim();
 
@@ -100,7 +117,9 @@ function joinRoom() {
     if (!code) return showToast('Ingresa el código de la sala');
 
     // Reload storage just in case
-    loadFromStorage();
+    // loadFromStorage();
+    const fetchedRoom = await loadRoomFromFirebase(code);
+    if (fetchedRoom) state.rooms[code] = fetchedRoom;
 
     const room = state.rooms[code];
     if (!room) return showToast('Sala no encontrada');
@@ -114,7 +133,8 @@ function joinRoom() {
             availability: [],
             hidden: false
         });
-        saveToStorage();
+        // saveToStorage();
+        await saveRoomToFirebase(code, room);
     }
 
     state.currentUser = username;
@@ -180,8 +200,10 @@ function renderCalendar(room, mode) {
     }
 }
 
-function toggleDay(day) {
-    loadFromStorage(); // Sync first
+async function toggleDay(day) {
+    // loadFromStorage(); // Sync first
+    const fetched = await loadRoomFromFirebase(state.currentRoomId);
+    if (fetched) state.rooms[state.currentRoomId] = fetched;
     const room = state.rooms[state.currentRoomId];
     const me = room.users.find(u => u.name === state.currentUser);
 
@@ -191,14 +213,17 @@ function toggleDay(day) {
         me.availability.push(day);
     }
 
-    saveToStorage();
+    // saveToStorage();
+    await saveRoomToFirebase(state.currentRoomId, room);
 
     // Re-render only this day or whole calendar? Whole is easier for now.
     renderCalendar(room, 'input');
 }
 
-function showResults() {
-    loadFromStorage();
+async function showResults() {
+    // loadFromStorage();
+    const fetched = await loadRoomFromFirebase(state.currentRoomId);
+    if (fetched) state.rooms[state.currentRoomId] = fetched;
     const room = state.rooms[state.currentRoomId];
 
     // Update Code Display in Results
@@ -249,24 +274,30 @@ function renderUserList(room) {
     });
 }
 
-function toggleHideUser(targetName) {
-    loadFromStorage();
+async function toggleHideUser(targetName) {
+    // loadFromStorage();
+    const fetched = await loadRoomFromFirebase(state.currentRoomId);
+    if (fetched) state.rooms[state.currentRoomId] = fetched;
     const room = state.rooms[state.currentRoomId];
     const user = room.users.find(u => u.name === targetName);
     if (user) {
         user.hidden = !user.hidden;
-        saveToStorage();
+        // saveToStorage();
+        await saveRoomToFirebase(state.currentRoomId, room);
         showResults(); // Refresh
     }
 }
 
-function kickUser(targetName) {
+async function kickUser(targetName) {
     if (!confirm(`¿Seguro que quieres expulsar a ${targetName}?`)) return;
 
-    loadFromStorage();
+    // loadFromStorage();
+    const fetched = await loadRoomFromFirebase(state.currentRoomId);
+    if (fetched) state.rooms[state.currentRoomId] = fetched;
     const room = state.rooms[state.currentRoomId];
     room.users = room.users.filter(u => u.name !== targetName);
-    saveToStorage();
+    // saveToStorage();
+    await saveRoomToFirebase(state.currentRoomId, room);
     showResults();
 }
 
@@ -304,31 +335,31 @@ function setupEventListeners() {
     });
 
     // Storage Sync (Magic for multi-tab)
-    window.addEventListener('storage', (e) => {
-        if (e.key === 'horario_rooms') {
-            loadFromStorage();
-            // Refresh current view if we are in a room
-            if (state.currentRoomId && state.rooms[state.currentRoomId]) {
-                const room = state.rooms[state.currentRoomId];
-                // Check if I was kicked
-                if (!room.users.find(u => u.name === state.currentUser)) {
-                    alert('Has sido expulsado de la sala.');
-                    location.reload();
-                    return;
-                }
+    // window.addEventListener('storage', (e) => {
+    //     if (e.key === 'horario_rooms') {
+    //         loadFromStorage();
+    //         // Refresh current view if we are in a room
+    //         if (state.currentRoomId && state.rooms[state.currentRoomId]) {
+    //             const room = state.rooms[state.currentRoomId];
+    //             // Check if I was kicked
+    //             if (!room.users.find(u => u.name === state.currentUser)) {
+    //                 alert('Has sido expulsado de la sala.');
+    //                 location.reload();
+    //                 return;
+    //             }
 
-                // Refresh Calendar if visible
-                if (!document.getElementById('view-calendar').classList.contains('hidden')) {
-                    renderCalendar(room, 'input');
-                }
-                // Refresh Results if visible
-                if (!document.getElementById('view-results').classList.contains('hidden')) {
-                    renderCalendar(room, 'result');
-                    renderUserList(room);
-                }
-            }
-        }
-    });
+    //             // Refresh Calendar if visible
+    //             if (!document.getElementById('view-calendar').classList.contains('hidden')) {
+    //                 renderCalendar(room, 'input');
+    //             }
+    //             // Refresh Results if visible
+    //             if (!document.getElementById('view-results').classList.contains('hidden')) {
+    //                 renderCalendar(room, 'result');
+    //                 renderUserList(room);
+    //             }
+    //         }
+    //     }
+    // });
 }
 
 // Run
