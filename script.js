@@ -188,7 +188,9 @@ function renderCalendar(room, mode) {
         if (mode === 'input') {
             // Check my availability
             const me = room.users.find(u => u.name === state.currentUser);
-            if (me && me.availability.includes(day)) {
+            // Firebase doesn't store empty arrays, so default to []
+            const myAvailability = (me && me.availability) || [];
+            if (me && myAvailability.includes(day)) {
                 dayEl.classList.add('selected'); // Green
             } else {
                 dayEl.classList.add('busy'); // Red (Default state logic: Red = Busy, Green = Free)
@@ -198,7 +200,7 @@ function renderCalendar(room, mode) {
         } else if (mode === 'result') {
             // Calculate group availability
             const activeUsers = room.users.filter(u => !u.hidden);
-            const isEveryoneFree = activeUsers.every(u => u.availability.includes(day));
+            const isEveryoneFree = activeUsers.every(u => (u.availability || []).includes(day));
 
             if (isEveryoneFree && activeUsers.length > 0) {
                 dayEl.classList.add('all-free'); // Green
@@ -217,6 +219,9 @@ async function toggleDay(day) {
     if (fetched) state.rooms[state.currentRoomId] = fetched;
     const room = state.rooms[state.currentRoomId];
     const me = room.users.find(u => u.name === state.currentUser);
+
+    // Initialize if missing (Firebase issue)
+    if (!me.availability) me.availability = [];
 
     if (me.availability.includes(day)) {
         me.availability = me.availability.filter(d => d !== day);
