@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Horar.io - Calendario Compartido</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <main class="app-container glass-panel">
+        <!-- VISTA 1: HOME -->
+        <section id="view-home" class="view active">
+            <h1 class="logo">Horar.io</h1>
+            <p class="subtitle">Sincroniza tus días libres con amigos.</p>
+
+            <div class="form-group">
+                <label for="username">Tu Nombre</label>
+                <input type="text" id="username" placeholder="Ej. Alex" autocomplete="off">
+            </div>
+
+            <div class="actions">
+                <button id="btn-go-create" class="btn btn-primary">Crear Calendario</button>
+                <div class="divider"><span>O</span></div>
+                <div class="join-group">
+                    <input type="text" id="join-code" placeholder="Código de Sala" autocomplete="off">
+                    <button id="btn-join" class="btn btn-secondary">Unirse</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- VISTA 2: CREAR CALENDARIO -->
+        <section id="view-create" class="view hidden">
+            <button class="btn-back" data-target="home">← Volver</button>
+            <h2>Nuevo Calendario</h2>
+
+            <div class="form-group">
+                <label for="cal-title">Título del Evento</label>
+                <input type="text" id="cal-title" placeholder="Ej. Vacaciones 2024">
+            </div>
+
+            <div class="form-group">
+                <label for="cal-month">Mes y Año</label>
+                <input type="month" id="cal-month">
+            </div>
+
+            <button id="btn-create-confirm" class="btn btn-primary full-width">Generar Código</button>
+        </section>
+
+        <!-- VISTA 3: CALENDARIO (SELECCIÓN) -->
+        <section id="view-calendar" class="view hidden">
+            <header class="cal-header">
+                <div class="header-top">
+                    <h2 id="display-cal-title">Título</h2>
+                    <div class="room-code-display" id="room-code-display" title="Click para copiar">
+                        <span class="label">CÓDIGO:</span>
+                        <span class="code">----</span>
+                    </div>
+                </div>
+                <p class="instruction">Marca los días que estás <strong>LIBRE</strong> (Verde).</p>
+            </header>
+
+            <div class="calendar-wrapper">
+                <div class="weekdays">
+                    <div>Dom</div>
+                    <div>Lun</div>
+                    <div>Mar</div>
+                    <div>Mié</div>
+                    <div>Jue</div>
+                    <div>Vie</div>
+                    <div>Sáb</div>
+                </div>
+                <div id="calendar-grid" class="calendar-grid">
+                    <!-- Días generados por JS -->
+                </div>
+            </div>
+
+            <div class="cal-footer">
+                <div class="user-status">
+                    <span>Tu usuario: <strong id="current-user-display">---</strong></span>
+                </div>
+                <button id="btn-view-results" class="btn btn-accent full-width">Ver Resultados Grupales</button>
+            </div>
+        </section>
+
+        <!-- VISTA 4: RESULTADOS -->
+        <section id="view-results" class="view hidden">
+            <button class="btn-back" data-target="calendar">← Volver a Selección</button>
+            <div class="header-top">
+                <h2>Disponibilidad Grupal</h2>
+                <div class="room-code-display" id="room-code-display-results" title="Click para copiar">
+                    <span class="label">CÓDIGO:</span>
+                    <span class="code">----</span>
+                </div>
+            </div>
+
+            <div class="results-summary">
+                <div class="legend">
+                    <span class="tag tag-green">Todos Libres</span>
+                    <span class="tag tag-red">Alguien Ocupado</span>
+                </div>
+            </div>
+
+            <div class="calendar-wrapper">
+                <div class="weekdays">
+                    <div>Dom</div>
+                    <div>Lun</div>
+                    <div>Mar</div>
+                    <div>Mié</div>
+                    <div>Jue</div>
+                    <div>Vie</div>
+                    <div>Sáb</div>
+                </div>
+                <div id="results-grid" class="calendar-grid results-mode">
+                    <!-- Días generados por JS -->
+                </div>
+            </div>
+
+            <div class="admin-panel glass-panel-inner">
+                <h3>Participantes</h3>
+                <ul id="users-list" class="users-list">
+                    <!-- Lista de usuarios generada por JS -->
+                </ul>
+            </div>
+        </section>
+    </main>
+
+    <div id="toast" class="toast hidden">Mensaje</div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
