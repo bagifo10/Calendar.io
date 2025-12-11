@@ -214,26 +214,68 @@ function renderCalendar(room, mode) {
 }
 
 async function toggleDay(day) {
-    // loadFromStorage(); // Sync first
-    const fetched = await loadRoomFromFirebase(state.currentRoomId);
-    if (fetched) state.rooms[state.currentRoomId] = fetched;
-    const room = state.rooms[state.currentRoomId];
-    const me = room.users.find(u => u.name === state.currentUser);
+    // 1. Optimistic Update (Visual Feedback Immediately)
+    const dayElements = document.querySelectorAll('.day');
+    // Find the element by text content (simple but effective here)
+    let targetEl = null;
 
-    // Initialize if missing (Firebase issue)
-    if (!me.availability) me.availability = [];
-
-    if (me.availability.includes(day)) {
-        me.availability = me.availability.filter(d => d !== day);
-    } else {
-        me.availability.push(day);
+    // We know the index if we calculate it, but iterating is safer blindly
+    for (let el of dayElements) {
+        if (el.textContent == day && !el.classList.contains('empty')) {
+            targetEl = el;
+            break;
+        }
     }
 
-    // saveToStorage();
-    await saveRoomToFirebase(state.currentRoomId, room);
+    if (targetEl) {
+        // Toggle classes immediately for feedback
+        if (targetEl.classList.contains('selected')) {
+            targetEl.classList.remove('selected');
+            targetEl.classList.add('busy');
+        } else {
+            targetEl.classList.add('selected');
+            targetEl.classList.remove('busy');
+        }
+    }
 
-    // Re-render only this day or whole calendar? Whole is easier for now.
-    renderCalendar(room, 'input');
+    try {
+        // 2. Fetch and Sync
+        const fetched = await loadRoomFromFirebase(state.currentRoomId);
+        if (fetched) state.rooms[state.currentRoomId] = fetched;
+
+        const room = state.rooms[state.currentRoomId];
+
+        // Safety: Ensure users is an array (Firebase object-ification fix)
+        if (room.users && !Array.isArray(room.users)) {
+            room.users = Object.values(room.users);
+        }
+
+        const me = room.users.find(u => u.name === state.currentUser);
+
+        if (!me) {
+            throw new Error("Usuario no encontrado en la sala. Posiblemente fuiste expulsado.");
+        }
+
+        // Initialize if missing
+        if (!me.availability) me.availability = [];
+
+        if (me.availability.includes(day)) {
+            me.availability = me.availability.filter(d => d !== day);
+        } else {
+            me.availability.push(day);
+        }
+
+        // 3. Save
+        await saveRoomToFirebase(state.currentRoomId, room);
+
+        // 4. Re-render cleanly to ensure state consistency
+        // renderCalendar(room, 'input'); // Optional: skip if optimistic update is trusted
+    } catch (e) {
+        console.error(e);
+        showToast("Error al guardar: " + e.message);
+        // Revert UI on error (simple reload)
+        enterRoom(state.currentRoomId);
+    }
 }
 
 async function showResults() {
