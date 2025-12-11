@@ -46,12 +46,23 @@ function saveToStorage() {
 */
 
 async function saveRoomToFirebase(roomId, data) {
-    await set(ref(db, "rooms/" + roomId), data);
+    try {
+        await set(ref(db, "rooms/" + roomId), data);
+    } catch (e) {
+        console.error(e);
+        showToast("Error guardando datos: " + e.message);
+    }
 }
 
 async function loadRoomFromFirebase(roomId) {
-    const snapshot = await get(ref(db, "rooms/" + roomId));
-    return snapshot.exists() ? snapshot.val() : null;
+    try {
+        const snapshot = await get(ref(db, "rooms/" + roomId));
+        return snapshot.exists() ? snapshot.val() : null;
+    } catch (e) {
+        console.error(e);
+        showToast("Error cargando datos: " + e.message);
+        return null;
+    }
 }
 
 // --- NAVIGATION ---
